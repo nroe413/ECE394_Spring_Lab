@@ -65,9 +65,11 @@
 //
 // Defines
 //
-#define RESULTS_BUFFER_SIZE     256
+#define RESULTS_BUFFER_SIZE 256
 #define num_bits 12
 #define V_cc 3.3
+#define G 0.1 // current sensing gain [V/A]
+#define V_DC 0.65 // dc quiescent voltage for current sensor [V]
 
 //
 // Globals
@@ -75,9 +77,13 @@
 uint16_t adcAResults[RESULTS_BUFFER_SIZE];   // Buffer for results
 uint16_t index;                              // Index into result buffer
 volatile uint16_t bufferFull;                // Flag to indicate buffer is full
-float adc_out; // digital output of ADC (x_{A/D})
-float V_ADC;
-
+float Vout_sense_ADC_raw; // digital output of ADC (output voltage) (x_{A/D})
+float Vout_sense_ADC; // estimated analog value of V_out_sense [V]
+float Vin_sense_ADC_raw; // digital output of ADC (input voltage) (x_{A/D})
+float Vin_sense_ADC; // estimated analog value of V_in_sense [V]
+float I_in_sense_ADC_raw; // digital output of ADC (Sensed Current) (x_{A/D})
+float I_in_sense_ADC;  // estimated analog voltage value of I_in_sense [V] (v_{A/D}(t))
+float I_in_sense_est; // estimated analog current value of I_in_sense [A]
 
 //
 // Function Prototypes
@@ -131,6 +137,7 @@ void main(void)
     //
     EALLOW;
     PieVectTable.ADCA1_INT = &adcA1ISR;     // Function for ADCA interrupt 1
+
     EDIS;
 
     //
@@ -213,6 +220,10 @@ void initADC(void)
     // Power up the ADC and then delay for 1 ms
     //
     AdcaRegs.ADCCTL1.bit.ADCPWDNZ = 1;
+
+
+
+
     EDIS;
 
     DELAY_US(1000);
@@ -244,24 +255,38 @@ void initEPWM(void)
     // EPwm1Regs.AQCTLB.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
     // EPwm1Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
 
-    // PWM 1 (with fs = 10kHz instead of 200kHz): fs = 10 kHz, up-down count, D = 0.5
-    EPwm1Regs.TBPRD = 7500; // Set Nr to 7500, this is max value it counts to
-    EPwm1Regs.CMPA.bit.CMPA = 3750; // Set compare A value to 3750 counts
-    EPwm1Regs.TBCTL.bit.CTRMODE = 0b10;    // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
+    // PWM BOOST: fs = 161 kHz, up-down count, D = 0.517
+    // EPwm7Regs.TBPRD = 465; // Set Nr to 465 for a ~161 kHz for up-down count, Nr is max value it counts to
+    // EPwm7Regs.CMPA.bit.CMPA = 240; // Set compare A value to 240 counts
+    // EPwm7Regs.TBCTL.bit.CTRMODE = 0b10;    // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
 
+    // PWM BOOST: fs = 200 kHz, up-down count, D = 0.5
+    // EPwm7Regs.TBPRD = 375; // Set Nr to 375 for a 200 kHz for up-down count, Nr is max value it counts to
+    // EPwm7Regs.CMPA.bit.CMPA = 188; // Set compare A value to 188 counts
+    // EPwm7Regs.TBCTL.bit.CTRMODE = 0b10;    // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
+    
+    // PWM BOOST: fs = 250 kHz, up-down count, D = 0.5
+    EPwm7Regs.TBPRD = 300; // Set Nr to 300 for a 250 kHz for up-down count, Nr is max value it counts to
+    EPwm7Regs.CMPA.bit.CMPA = 150; // Set compare A value to 150 counts
+    EPwm7Regs.TBCTL.bit.CTRMODE = 0b10;    // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
+    
+    // PWM BOOST Test: fs = 60 kHz, up-down count, D = 
+    // EPwm7Regs.TBPRD = 1250; // Set Nr to 1250 for a ~60 Khz for up-down count, Nr is max value it counts to
+    // EPwm7Regs.CMPA.bit.CMPA = 646; // Set compare A value to 646 counts
+    // EPwm7Regs.TBCTL.bit.CTRMODE = 0b10; // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
     // For the following registers: 
     // - 00 means 'do nothing' to the PWM signal
     // - 01 means force PWM signal to 'low'
     // - 10 means force PWM signal to 'high'
     // - 11 means 'toggle' the PWM signal
-    EPwm1Regs.AQCTLA.bit.CAD = 0b10; // set PWM to 'high' when: counter is going 'down' AND equal to the compare value
-    EPwm1Regs.AQCTLA.bit.CAU = 0b01; // set PWM to 'low' when: counter is going 'up' AND equal to the compare value
-    EPwm1Regs.AQCTLA.bit.ZRO = 0; // set PWM to 'do nothing' when counter is at zero (minimum)
-    EPwm1Regs.AQCTLA.bit.PRD = 0; // set PWM to 'do nothing' when counter is at Nr (peak)
-    EPwm1Regs.AQCTLB.bit.CAD = 0b01; // set PWM to 'low' when: counter is going 'down' AND equal to the compare value
-    EPwm1Regs.AQCTLB.bit.CAU = 0b10; // set PWM to 'high' when: counter is going 'up' AND equal to the compare value
-    EPwm1Regs.AQCTLB.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
-    EPwm1Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
+    EPwm7Regs.AQCTLA.bit.CAD = 0b10; // set PWM to 'high' when: counter is going 'down' AND equal to the compare value
+    EPwm7Regs.AQCTLA.bit.CAU = 0b01; // set PWM to 'low' when: counter is going 'up' AND equal to the compare value
+    EPwm7Regs.AQCTLA.bit.ZRO = 0; // set PWM to 'do nothing' when counter is at zero (minimum)
+    EPwm7Regs.AQCTLA.bit.PRD = 0; // set PWM to 'do nothing' when counter is at Nr (peak)
+    EPwm7Regs.AQCTLB.bit.CAD = 0b01; // set PWM to 'low' when: counter is going 'down' AND equal to the compare value
+    EPwm7Regs.AQCTLB.bit.CAU = 0b10; // set PWM to 'high' when: counter is going 'up' AND equal to the compare value
+    EPwm7Regs.AQCTLB.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
+    EPwm7Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
 
    
     // PWM 2: fs = 75 kHz, down count, D = 0.7
@@ -304,35 +329,34 @@ void initEPWM(void)
     // EPwm1Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
     
     // Lab 1 Week 2
-    EPwm1Regs.ETSEL.bit.SOCAEN = 0b1; // Enable SOC on A group
-    EPwm1Regs.ETSEL.bit.SOCASEL = 0b011; // Select SOC on up-down count - enable tb counter when counter equal to 0 () or Nr (TBPRD)
-    EPwm1Regs.ETPS.bit.SOCAPRD = 0b01; // Generate pulse on 1st event (using 2nd/3rd/etc would be to sample ADC slower)
-    EPwm1Regs.ETPS.bit.INTPRD = 1; // Not using for now... works similarly to SOCAPRD (maybe can work faster!)
+    EPwm7Regs.ETSEL.bit.SOCAEN = 0b1; // Enable SOC on A group
+    EPwm7Regs.ETSEL.bit.SOCASEL = 0b011; // Select SOC on up-down count - enable tb counter when counter equal to 0 () or Nr (TBPRD)
+    EPwm7Regs.ETPS.bit.SOCAPRD = 0b01; // Generate pulse on 1st event (using 2nd/3rd/etc would be to sample ADC slower)
+    EPwm7Regs.ETPS.bit.INTPRD = 1; // Not using for now... works similarly to SOCAPRD (maybe can work faster!)
 
-    EPwm1Regs.ETSOCPS.bit.SOCAPRD2 = 10; // Additional selection on top of SOCAPRD (which had only 2 bits)
+    EPwm7Regs.ETSOCPS.bit.SOCAPRD2 = 10; // Additional selection on top of SOCAPRD (which had only 2 bits)
     // 2 means ADC samples once every switch cycle
     // 10 means ADC samples once every 5 switch cycles
     // This is because SOCASEL is set to select SOC on up-down count (see comment further above)
-    EPwm1Regs.ETPS.bit.SOCPSSEL = 1; // select SOCAPRD2 instead of SOCAPRD (which would be 0)
-    // end Lab 1 Week 2
+    EPwm7Regs.ETPS.bit.SOCPSSEL = 1; // select SOCAPRD2 instead of SOCAPRD (which would be 0)
 
     // Optional stuff to edit CLK
-    EPwm1Regs.TBCTL.bit.CLKDIV = 0b000; // how fast the counter increments (can divide the clock to slow it down)
-    EPwm1Regs.TBCTL.bit.HSPCLKDIV = 0b000; // high speed clock (not used)
+    EPwm7Regs.TBCTL.bit.CLKDIV = 0b000; // how fast the counter increments (can divide the clock to slow it down)
+    EPwm7Regs.TBCTL.bit.HSPCLKDIV = 0b000; // high speed clock (not used)
 
     // Set the PWM signals to output pins
-    GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 0b01; // amux is the lower order bits, we want to set the lowest bit to 1 to use gpio0 for pwm1
-    GpioCtrlRegs.GPAGMUX1.bit.GPIO0 = 0b00; // gmux is the higher order bits, we want to clear all of these to only use the gpio0
-    GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0b01; // amux is the lower order bits, we want to set the lowest bit to 1 to use gpio1 for pwm1
-    GpioCtrlRegs.GPAGMUX1.bit.GPIO1 = 0b00; // gmux is the higher order bits, we want to clear all of these to only use the gpio1
+    GpioCtrlRegs.GPAMUX1.bit.GPIO12 = 0b01; // amux is the lower order bits, we want to set the lowest bit to 1 to use gpio12 for pwm1
+    GpioCtrlRegs.GPAGMUX1.bit.GPIO12 = 0b00; // gmux is the higher order bits, we want to clear all of these to only use the gpio12
+    GpioCtrlRegs.GPAMUX1.bit.GPIO13 = 0b01; // amux is the lower order bits, we want to set the lowest bit to 1 to use gpio13 for pwm1
+    GpioCtrlRegs.GPAGMUX1.bit.GPIO13 = 0b00; // gmux is the higher order bits, we want to clear all of these to only use the gpio13
 
     // this is how to configure dead time correctly 
-    EPwm1Regs.DBCTL.bit.IN_MODE =  0; // we want to access only PWM_A, using PWM_B is unnecessary
-    EPwm1Regs.DBCTL.bit.POLSEL = 0b10; // we want to invert only one of the signals so that it mimics the original PWM_B
-    EPwm1Regs.DBCTL.bit.OUT_MODE = 0b11; // we want to access the new signals which are both delayed via FED & RED; we don't want to access the original PWM_A or PWM_B
+    EPwm7Regs.DBCTL.bit.IN_MODE =  0; // we want to access only PWM_A, using PWM_B is unnecessary
+    EPwm7Regs.DBCTL.bit.POLSEL = 0b10; // we want to invert only one of the signals so that it mimics the original PWM_B
+    EPwm7Regs.DBCTL.bit.OUT_MODE = 0b11; // we want to access the new signals which are both delayed via FED & RED; we don't want to access the original PWM_A or PWM_B
 
-    EPwm1Regs.DBFED.bit.DBFED = 15; // Falling edge delay is set as 15 clock periods (which evaluates to 100ns of dead time)
-    EPwm1Regs.DBRED.bit.DBRED = 15; // Rising edge delay is set as 15 clock periods (which evaluates to 100ns of dead time)
+    EPwm7Regs.DBFED.bit.DBFED = 4; // Falling edge delay is set as 4+1=5 clock periods (which evaluates to 5*6.67ns=33.35ns of dead time)
+    EPwm7Regs.DBRED.bit.DBRED = 4; // Rising edge delay is set as 4+1=5 clock periods (which evaluates to 5*6.67ns=33.35ns of dead time)
 
     EDIS;
 }
@@ -352,17 +376,44 @@ void initADCSOC(void)
     // AdcaRegs.ADCSOCxCTL.bit.ACQPS = ; //
     // AdcaRegs.ADCSOCxCTL.bit.TRIGSEL = ; //
 
-    AdcaRegs.ADCSOC0CTL.bit.CHSEL = 1;     // SOC0 will convert pin A1
+    // Configure ADCINA0 (Vout_Sense)
+    AdcaRegs.ADCSOC0CTL.bit.CHSEL = 0;     // SOC0 will convert pin ADCINA0
                                            // 0:A0  1:A1  2:A2  3:A3
                                            // 4:A4   5:A5   6:A6   7:A7
                                            // 8:A8   9:A9   A:A10  B:A11
                                            // C:A12  D:A13  E:A14  F:A15
     AdcaRegs.ADCSOC0CTL.bit.ACQPS = 14;    // Sample window is 15 SYSCLK cycles
-    AdcaRegs.ADCSOC0CTL.bit.TRIGSEL = 5;   // Trigger on ePWM1 SOCA
+    AdcaRegs.ADCSOC0CTL.bit.TRIGSEL = 0x11;   // Trigger on ePWM7A SOCA
 
+
+    // Configure ADCINA4 (Vin_Sense)
+    AdcaRegs.ADCSOC1CTL.bit.CHSEL = 4;     // SOC1 will convert pin ADCINA4
+                                           // 0:A0  1:A1  2:A2  3:A3
+                                           // 4:A4   5:A5   6:A6   7:A7
+                                           // 8:A8   9:A9   A:A10  B:A11
+                                           // C:A12  D:A13  E:A14  F:A15
+    AdcaRegs.ADCSOC1CTL.bit.ACQPS = 14;    // Sample window is 15 SYSCLK cycles
+    AdcaRegs.ADCSOC1CTL.bit.TRIGSEL = 0x11;   // Trigger on ePWM7A SOCA
+
+    // Configure ADCINA9 (Iin_Sense)
+
+    AdcaRegs.ADCSOC2CTL.bit.CHSEL = 9;     // SOC2 will convert pin ADCINA9
+                                           // 0:A0  1:A1  2:A2  3:A3
+                                           // 4:A4   5:A5   6:A6   7:A7
+                                           // 8:A8   9:A9   A:A10  B:A11
+                                           // C:A12  D:A13  E:A14  F:A15
+    AdcaRegs.ADCSOC2CTL.bit.ACQPS = 14;    // Sample window is 15 SYSCLK cycles
+    AdcaRegs.ADCSOC2CTL.bit.TRIGSEL = 0x11;   // Trigger on ePWM7A SOCA
+
+    // Only need to configure ISR Flag 1 time for all ADCA measurements
     AdcaRegs.ADCINTSEL1N2.bit.INT1SEL = 0; // End of SOC0 will set INT1 flag
     AdcaRegs.ADCINTSEL1N2.bit.INT1E = 1;   // Enable INT1 flag
     AdcaRegs.ADCINTFLGCLR.bit.ADCINT1 = 1; // Make sure INT1 flag is cleared
+
+    // 
+    AnalogSubsysRegs.AGPIOCTRLH.bit.GPIO227 = 1;
+    GpioCtrlRegs.GPHAMSEL.bit.GPIO227 = 1;
+
 
     EDIS;
 }
@@ -375,10 +426,29 @@ __interrupt void adcA1ISR(void)
     //
     // Add the latest result to the buffer
     // ADCRESULT0 is the result register of SOC0
+    // adcAResults[index++] = AdcaResultRegs.ADCRESULT0;
+    // adc_out = AdcaResultRegs.ADCRESULT0;
+    // // V_ADC = (adc_out * V_cc)/(pow(2, num_bits) - 1);
+    // V_ADC = (adc_out * V_cc)/((1 << num_bits) - 1);
+
+    // Vout_ADC_digital_estimation
     adcAResults[index++] = AdcaResultRegs.ADCRESULT0;
-    adc_out = AdcaResultRegs.ADCRESULT0;
-    // V_ADC = (adc_out * V_cc)/(pow(2, num_bits) - 1);
-    V_ADC = (adc_out * V_cc)/((1 << num_bits) - 1);
+    Vout_sense_ADC_raw = AdcaResultRegs.ADCRESULT0; // This is Vout sense in digital land (# between 0 and 2^12 - 1)
+    // V_ADC = (adc_out * V_cc)/(pow(2, num_bits) - 1); 
+    Vout_sense_ADC = (Vout_sense_ADC_raw * V_cc)/((1 << num_bits) - 1); // 48V corresponds to a 3.15V reading from output of voltage divider
+
+    // Vin_ADC_digital_estimation
+    adcAResults[index++] = AdcaResultRegs.ADCRESULT1;
+    Vin_sense_ADC_raw = AdcaResultRegs.ADCRESULT1; // This is Vout sense in digital land (# between 0 and 2^12 - 1)
+    // V_ADC = (adc_out * V_cc)/(pow(2, num_bits) - 1); 
+    Vin_sense_ADC = (Vin_sense_ADC_raw * V_cc)/((1 << num_bits) - 1); // 48V corresponds to a 3.15V reading from output of voltage divider
+
+    // Iin_Sense_digital_estimation
+    adcAResults[index++] = AdcaResultRegs.ADCRESULT2;
+    I_in_sense_ADC_raw = AdcaResultRegs.ADCRESULT2; // This is Vout sense in digital land (# between 0 and 2^12 - 1)
+    // V_ADC = (adc_out * V_cc)/(pow(2, num_bits) - 1); 
+    I_in_sense_ADC = (I_in_sense_ADC_raw* V_cc)/((1 << num_bits) - 1); // 48V corresponds to a 3.15V reading from output of voltage divider
+    I_in_sense_est = (I_in_sense_ADC - V_DC)/G; // estimated analog current for I_in_sense [A]
 
     //
     // Set the bufferFull flag if the buffer is full
