@@ -236,25 +236,6 @@ void initEPWM(void)
 {
     EALLOW;
 
-    // PWM 1: fs = 200 kHz, up-down count, D = 0.5
-    // EPwm1Regs.TBPRD = 375; // Set Nr to 375, this is max value it counts to
-    // EPwm1Regs.CMPA.bit.CMPA = 188; // Set compare A value to 188 counts (rounded up from 187.5)
-    // EPwm1Regs.TBCTL.bit.CTRMODE = 0b10;    // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
-
-    // // For the following registers: 
-    // // - 00 means 'do nothing' to the PWM signal
-    // // - 01 means force PWM signal to 'low'
-    // // - 10 means force PWM signal to 'high'
-    // // - 11 means 'toggle' the PWM signal
-    // EPwm1Regs.AQCTLA.bit.CAD = 0b10; // set PWM to 'high' when: counter is going 'down' AND equal to the compare value
-    // EPwm1Regs.AQCTLA.bit.CAU = 0b01; // set PWM to 'low' when: counter is going 'up' AND equal to the compare value
-    // EPwm1Regs.AQCTLA.bit.ZRO = 0; // set PWM to 'do nothing' when counter is at zero (minimum)
-    // EPwm1Regs.AQCTLA.bit.PRD = 0; // set PWM to 'do nothing' when counter is at Nr (peak)
-    // EPwm1Regs.AQCTLB.bit.CAD = 0b01; // set PWM to 'low' when: counter is going 'down' AND equal to the compare value
-    // EPwm1Regs.AQCTLB.bit.CAU = 0b10; // set PWM to 'high' when: counter is going 'up' AND equal to the compare value
-    // EPwm1Regs.AQCTLB.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
-    // EPwm1Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
-
     // PWM BOOST: fs = 161 kHz, up-down count, D = 0.517
     // EPwm7Regs.TBPRD = 465; // Set Nr to 465 for a ~161 kHz for up-down count, Nr is max value it counts to
     // EPwm7Regs.CMPA.bit.CMPA = 240; // Set compare A value to 240 counts
@@ -268,12 +249,8 @@ void initEPWM(void)
     // PWM BOOST: fs = 250 kHz, up-down count, D = 0.5
     EPwm7Regs.TBPRD = 300; // Set Nr to 300 for a 250 kHz for up-down count, Nr is max value it counts to
     EPwm7Regs.CMPA.bit.CMPA = 150; // Set compare A value to 150 counts
-    EPwm7Regs.TBCTL.bit.CTRMODE = 0b10;    // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
+    EPwm7Regs.TBCTL.bit.CTRMODE = 0b10; // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
     
-    // PWM BOOST Test: fs = 60 kHz, up-down count, D = 
-    // EPwm7Regs.TBPRD = 1250; // Set Nr to 1250 for a ~60 Khz for up-down count, Nr is max value it counts to
-    // EPwm7Regs.CMPA.bit.CMPA = 646; // Set compare A value to 646 counts
-    // EPwm7Regs.TBCTL.bit.CTRMODE = 0b10; // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
     // For the following registers: 
     // - 00 means 'do nothing' to the PWM signal
     // - 01 means force PWM signal to 'low'
@@ -283,52 +260,12 @@ void initEPWM(void)
     EPwm7Regs.AQCTLA.bit.CAU = 0b01; // set PWM to 'low' when: counter is going 'up' AND equal to the compare value
     EPwm7Regs.AQCTLA.bit.ZRO = 0; // set PWM to 'do nothing' when counter is at zero (minimum)
     EPwm7Regs.AQCTLA.bit.PRD = 0; // set PWM to 'do nothing' when counter is at Nr (peak)
-    EPwm7Regs.AQCTLB.bit.CAD = 0b01; // set PWM to 'low' when: counter is going 'down' AND equal to the compare value
-    EPwm7Regs.AQCTLB.bit.CAU = 0b10; // set PWM to 'high' when: counter is going 'up' AND equal to the compare value
-    EPwm7Regs.AQCTLB.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
-    EPwm7Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
-
-   
-    // PWM 2: fs = 75 kHz, down count, D = 0.7
-    // EPwm1Regs.TBPRD = 2000; // Set Nr to 2000, this is max value it counts to
-    // EPwm1Regs.CMPA.bit.CMPA = 1400; // Set compare A value to 1400 counts
-    // EPwm1Regs.TBCTL.bit.CTRMODE = 0b01; // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
-
-    // // For the following registers: 
-    // // - 00 means 'do nothing' to the PWM signal
-    // // - 01 means force PWM signal to 'low'
-    // // - 10 means force PWM signal to 'high'
-    // // - 11 means 'toggle' the PWM signal
-    // EPwm1Regs.AQCTLA.bit.CAD = 0b10; // set PWM to 'high' when: counter is going 'down' AND equal to the compare value
-    // EPwm1Regs.AQCTLA.bit.CAU = 0; // set PWM to 'do nothing' when: counter is going 'up' AND equal to the compare value
-    // EPwm1Regs.AQCTLA.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
-    // EPwm1Regs.AQCTLA.bit.PRD = 0b01; // set PWM to 'low' when: counter is at Nr (peak)
-    // EPwm1Regs.AQCTLB.bit.CAD = 0b01; // set PWM to 'low' when: counter is going 'down' AND equal to the compare value
-    // EPwm1Regs.AQCTLB.bit.CAU = 0; // set PWM to 'do nothing' when: counter is going 'up' AND equal to the compare value
-    // EPwm1Regs.AQCTLB.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
-    // EPwm1Regs.AQCTLB.bit.PRD = 0b10; // set PWM to 'high' when: counter is at Nr (peak)
+    // EPwm7Regs.AQCTLB.bit.CAD = 0b01; // set PWM to 'low' when: counter is going 'down' AND equal to the compare value
+    // EPwm7Regs.AQCTLB.bit.CAU = 0b10; // set PWM to 'high' when: counter is going 'up' AND equal to the compare value
+    // EPwm7Regs.AQCTLB.bit.ZRO = 0; // set PWM to 'do nothing' when: counter is at zero (minimum)
+    // EPwm7Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
     
-
-    // PWM 3: fs = 10 kHz, up count, D = 0.3
-    // EPwm1Regs.TBPRD = 15000; // Set Nr to 15000, this is max value it counts to
-    // EPwm1Regs.CMPA.bit.CMPA = 4500; // Set compare A value to 4500 counts
-    // EPwm1Regs.TBCTL.bit.CTRMODE = 0b00; // 10 is up-down count mode; 01 is down count mode; 00 is up count mode 
-
-    // // For the following registers: 
-    // // - 00 means 'do nothing' to the PWM signal
-    // // - 01 means force PWM signal to 'low'
-    // // - 10 means force PWM signal to 'high'
-    // // - 11 means 'toggle' the PWM signal
-    // EPwm1Regs.AQCTLA.bit.CAD = 0; // set PWM to 'do nothing' when: counter is going 'down' AND equal to the compare value
-    // EPwm1Regs.AQCTLA.bit.CAU = 0b01; // set PWM to 'low' when: counter is going 'up' AND equal to the compare value
-    // EPwm1Regs.AQCTLA.bit.ZRO = 0b10; // set PWM to 'high' when: counter is at zero (minimum)
-    // EPwm1Regs.AQCTLA.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
-    // EPwm1Regs.AQCTLB.bit.CAD = 0; // set PWM to 'do nothing' when: counter is going 'down' AND equal to the compare value
-    // EPwm1Regs.AQCTLB.bit.CAU = 0b10; // set PWM to 'high' when: counter is going 'up' AND equal to the compare value
-    // EPwm1Regs.AQCTLB.bit.ZRO = 0b01; // set PWM to 'low' when: counter is at zero (minimum)
-    // EPwm1Regs.AQCTLB.bit.PRD = 0; // set PWM to 'do nothing' when: counter is at Nr (peak)
-    
-    // Lab 1 Week 2
+    // ADC SOC
     EPwm7Regs.ETSEL.bit.SOCAEN = 0b1; // Enable SOC on A group
     EPwm7Regs.ETSEL.bit.SOCASEL = 0b011; // Select SOC on up-down count - enable tb counter when counter equal to 0 () or Nr (TBPRD)
     EPwm7Regs.ETPS.bit.SOCAPRD = 0b01; // Generate pulse on 1st event (using 2nd/3rd/etc would be to sample ADC slower)
@@ -345,8 +282,6 @@ void initEPWM(void)
     EPwm7Regs.TBCTL.bit.HSPCLKDIV = 0b000; // high speed clock (not used)
 
     // Set the PWM signals to output pins
-    GpioCtrlRegs.GPAMUX1.bit.GPIO12 = 0b01; // amux is the lower order bits, we want to set the lowest bit to 1 to use gpio12 for pwm1
-    GpioCtrlRegs.GPAGMUX1.bit.GPIO12 = 0b00; // gmux is the higher order bits, we want to clear all of these to only use the gpio12
     GpioCtrlRegs.GPAMUX1.bit.GPIO13 = 0b01; // amux is the lower order bits, we want to set the lowest bit to 1 to use gpio13 for pwm1
     GpioCtrlRegs.GPAGMUX1.bit.GPIO13 = 0b00; // gmux is the higher order bits, we want to clear all of these to only use the gpio13
 
